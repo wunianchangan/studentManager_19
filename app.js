@@ -3,6 +3,12 @@ let svgCaptcha=require('svg-captcha');
 let path=require('path');
 let session=require('express-session');
 let bodyParser = require('body-parser')
+let MongoClient = require('mongodb').MongoClient;
+
+let url = 'mongodb://localhost:27017';
+ 
+// Database Name
+let dbName = 'studentManager';
 
 
 // 开启服务
@@ -78,7 +84,34 @@ app.get('/register',(req,res)=>{
 app.post('/register',(req,res)=>{
     let userName=req.body.userName;
     let userPass=req.body.userPass;
-    
+    MongoClient.connect(url, function(err, client) {
+        let db = client.db(dbName);
+        const collection = db.collection('documents');
+        collection.find({
+            userName
+        }).toArray((err,doc)=>{
+            if(doc.length==0){
+                //用户名没有被占用，增加数据
+                collection.insertOne({
+                    userName,
+                    userPass
+                },(err,result)=>{
+                    if(err){
+                        console.log(err); 
+                    }else{
+                        res.setHeader('content-type','text/html');
+                        res.send("<script>alert('欢迎入坑');window.location='/login'</script>");
+                        client.close();
+                    }
+                })
+            }else{
+                // 用户名被占用
+                res.setHeader('content-type','text/html');
+                res.send("<script>alert('用户名被占用');window.location='/register'</script>");
+                client.close();
+            }
+        })
+      });
     
     
 })
